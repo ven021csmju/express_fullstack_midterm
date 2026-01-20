@@ -1,25 +1,45 @@
-import express from "express";
-import cors from "cors";
-import fs from "fs";
-import path from "path";
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());  // อนุญาต cross-origin จาก frontend
 app.use(express.json());
 
-const logDir = "logs";
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+// สร้างโฟลเดอร์ logs ถ้ายังไม่มี (สำหรับ volume demo)
+const logsDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir);
+}
 
-app.get("/api/demo", (req, res) => {
-  fs.appendFileSync("logs/access.log", `${new Date().toISOString()}\n`);
+// Endpoint demo: Return Git + Docker info และ log request
+app.get('/api/demo', (req, res) => {
+  const logMessage = `Request at ${new Date().toISOString()}: ${req.ip}\n`;
+  fs.appendFileSync(path.join(logsDir, 'access.log'), logMessage);
+
   res.json({
-    git: "enabled",
-    docker: "enabled"
+    git: {
+      title: 'Advanced Git Workflow',
+      detail: 'ใช้ branch protection บน GitHub, code review ใน PR, และ squash merge เพื่อ history สะอาด'
+    },
+    docker: {
+      title: 'Advanced Docker',
+      detail: 'ใช้ multi-stage build, healthcheck ใน Dockerfile, และ orchestration ด้วย Compose/Swarm'
+    }
   });
 });
 
+// Error handling
 app.use((err, req, res, next) => {
-  res.status(500).json({ error: err.message });
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
-app.listen(3000, () => console.log("Backend running"));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
